@@ -55,6 +55,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=48),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+}
+
 ROOT_URLCONF = "osd.urls"
 
 CORS_ALLOW_ALL_ORIGINS = True
