@@ -9,7 +9,7 @@ from .serializers import DeviceSerializer
 
 from .services import process_device_heartbeat
 
-from apps.accounts.permissions import IsAdminOrSuperAdmin
+from apps.accounts.permissions import IsAuthenticated
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
@@ -35,7 +35,7 @@ class DeviceViewSet(viewsets.ModelViewSet):
         "name",
     ]
 
-    permission_classes = [IsAdminOrSuperAdmin]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["post"], url_path="heartbeat")
     def heartbeat(self, request):
