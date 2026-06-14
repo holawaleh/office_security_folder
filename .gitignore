@@ -4,6 +4,7 @@ __pycache__/
 
 # Virtual Environment
 osenv/
+osenv_broken_py311/
 
 # Environment Variables
 .env

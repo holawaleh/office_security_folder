@@ -11,6 +11,7 @@ urlpatterns = [
     path("api/devices/", include("apps.devices.urls")),
     path("api/accounts/", include("apps.accounts.urls")),
     path("api/access/", include("apps.access.urls")),
+    path("api/visitors/", include("apps.visitors.urls")),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]

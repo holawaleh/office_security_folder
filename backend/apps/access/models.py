@@ -11,9 +11,28 @@ class AccessPerson(models.Model):
         ("CONTRACTOR", "CONTRACTOR"),
     ]
 
+    PERSON_TYPES = [
+        ("STAFF", "STAFF"),
+        ("VISITOR", "VISITOR"),
+        ("OFFICE_WORKER", "OFFICE_WORKER"),
+        ("CONTRACTOR", "CONTRACTOR"),
+        ("SECURITY", "SECURITY"),
+        ("OTHER", "OTHER"),
+    ]
+
     full_name = models.CharField(max_length=255, db_index=True)
 
-    employee_id = models.CharField(max_length=100, unique=True, db_index=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+
+    email = models.EmailField(blank=True)
+
+    person_type = models.CharField(
+        max_length=30, choices=PERSON_TYPES, default="STAFF", db_index=True
+    )
+
+    employee_id = models.CharField(
+        max_length=100, unique=True, null=True, blank=True, db_index=True
+    )
 
     rfid_uid = models.CharField(
         max_length=100, unique=True, null=True, blank=True, db_index=True

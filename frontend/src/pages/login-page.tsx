@@ -44,7 +44,7 @@ export default function LoginPage() {
 
       navigate("/dashboard");
 
-    } catch (err) {
+    } catch {
       setError(
         "Invalid username or password"
       );

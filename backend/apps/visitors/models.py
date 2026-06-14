@@ -11,6 +11,15 @@ class Visitor(models.Model):
         ("CHECKED_OUT", "CHECKED_OUT"),
     ]
 
+    VISIT_USAGE = [
+        ("MEETING", "MEETING"),
+        ("DELIVERY", "DELIVERY"),
+        ("INTERVIEW", "INTERVIEW"),
+        ("MAINTENANCE", "MAINTENANCE"),
+        ("OFFICIAL", "OFFICIAL"),
+        ("CUSTOM", "CUSTOM"),
+    ]
+
     full_name = models.CharField(max_length=255, db_index=True)
 
     phone_number = models.CharField(max_length=20, blank=True)
@@ -18,6 +27,12 @@ class Visitor(models.Model):
     email = models.EmailField(blank=True)
 
     host_name = models.CharField(max_length=255, db_index=True)
+
+    visit_usage = models.CharField(
+        max_length=30, choices=VISIT_USAGE, default="MEETING", db_index=True
+    )
+
+    custom_visit_usage = models.CharField(max_length=255, blank=True)
 
     purpose = models.TextField()
 
@@ -33,7 +48,7 @@ class Visitor(models.Model):
 
     check_in_time = models.DateTimeField(null=True, blank=True)
 
-    # check_out_time = models.DateTimeField(null=True, blank=True)
+    check_out_time = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
