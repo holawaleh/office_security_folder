@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -8,7 +9,6 @@ import {
   getAccessPeople,
 } from "../api/access-api";
 import {
-  createUserProfile,
   getUserProfiles,
 } from "../api/account-api";
 import {
@@ -26,8 +26,7 @@ type DashboardSection =
   | "overview"
   | "people"
   | "visitors"
-  | "devices"
-  | "admins";
+  | "devices";
 
 const sections: {
   id: DashboardSection;
@@ -37,7 +36,6 @@ const sections: {
   { id: "people", label: "People" },
   { id: "visitors", label: "Visitors" },
   { id: "devices", label: "Devices" },
-  { id: "admins", label: "Admins" },
 ];
 
 const initialDeviceForm = {
@@ -47,16 +45,6 @@ const initialDeviceForm = {
   ip_address: "",
   firmware_version: "",
   status: "OFFLINE",
-};
-
-const initialAdminForm = {
-  username: "",
-  password: "",
-  email: "",
-  first_name: "",
-  last_name: "",
-  phone_number: "",
-  role: "ADMIN",
 };
 
 const initialPersonForm = {
@@ -93,14 +81,16 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleString();
 }
 
-export default function DashboardPage() {
+export default function DashboardPage({
+  initialSection = "overview",
+}: {
+  initialSection?: DashboardSection;
+}) {
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] =
-    useState<DashboardSection>("overview");
+    useState<DashboardSection>(initialSection);
   const [deviceForm, setDeviceForm] =
     useState(initialDeviceForm);
-  const [adminForm, setAdminForm] =
-    useState(initialAdminForm);
   const [personForm, setPersonForm] =
     useState(initialPersonForm);
   const [visitorForm, setVisitorForm] =
@@ -132,16 +122,6 @@ export default function DashboardPage() {
       setDeviceForm(initialDeviceForm);
       queryClient.invalidateQueries({
         queryKey: ["devices"],
-      });
-    },
-  });
-
-  const createAdminMutation = useMutation({
-    mutationFn: createUserProfile,
-    onSuccess: () => {
-      setAdminForm(initialAdminForm);
-      queryClient.invalidateQueries({
-        queryKey: ["user-profiles"],
       });
     },
   });
@@ -264,7 +244,7 @@ export default function DashboardPage() {
 
               <nav
                 aria-label="Dashboard sections"
-                className="grid grid-cols-2 gap-2 rounded-lg border border-slate-800 bg-slate-900 p-2 sm:grid-cols-5"
+                className="grid grid-cols-2 gap-2 rounded-lg border border-slate-800 bg-slate-900 p-2 sm:grid-cols-4"
               >
                 {sections.map((section) => (
                   <button
@@ -358,17 +338,6 @@ export default function DashboardPage() {
                 />
               )}
 
-              {activeSection === "admins" && (
-                <AdminsSection
-                  users={users}
-                  form={adminForm}
-                  setForm={setAdminForm}
-                  loading={createAdminMutation.isPending}
-                  onSubmit={() => {
-                    createAdminMutation.mutate(adminForm);
-                  }}
-                />
-              )}
             </>
           )}
         </main>
@@ -449,9 +418,9 @@ function OverviewSection({
               label="Add Visitor"
               onClick={() => onOpenSection("visitors")}
             />
-            <ActionButton
-              label="Manage Admins"
-              onClick={() => onOpenSection("admins")}
+            <ActionLink
+              label="Open Settings"
+              to="/settings"
             />
           </div>
         </ActivityPanel>
@@ -805,6 +774,13 @@ function DevicesSection({
         listTitle="Device Inventory"
         list={<DeviceInventory devices={devices} />}
       >
+        <div className="mb-5 rounded-lg border border-slate-700 bg-slate-800 p-4 text-sm text-slate-300">
+          Add the device name, unique serial number, physical
+          location, optional IP address, and firmware version.
+          The serial number must match the value sent by the
+          device heartbeat endpoint.
+        </div>
+
         <form
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
           onSubmit={(event) => {
@@ -875,114 +851,6 @@ function DevicesSection({
         </form>
       </ManagementLayout>
     </div>
-  );
-}
-
-function AdminsSection({
-  users,
-  form,
-  setForm,
-  loading,
-  onSubmit,
-}: {
-  users: ReturnType<typeof getUserProfiles> extends Promise<infer T>
-    ? T
-    : never;
-  form: typeof initialAdminForm;
-  setForm: (form: typeof initialAdminForm) => void;
-  loading: boolean;
-  onSubmit: () => void;
-}) {
-  return (
-    <ManagementLayout
-      title="Owner Admins"
-      description="Add operators with full or restricted privileges for managing the security system."
-      listTitle="Admin Accounts"
-      list={
-        <CompactList
-          emptyText="No admin users listed yet"
-          items={users.slice(0, 8).map((user) => ({
-            title: user.full_name,
-            meta: `${user.role} - ${user.email || "No email"}`,
-          }))}
-        />
-      }
-    >
-      <form
-        className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        <Input
-          label="Username"
-          value={form.username}
-          onChange={(value) =>
-            setForm({ ...form, username: value })
-          }
-          required
-        />
-        <Input
-          label="Password"
-          type="password"
-          value={form.password}
-          onChange={(value) =>
-            setForm({ ...form, password: value })
-          }
-          required
-        />
-        <Input
-          label="First name"
-          value={form.first_name}
-          onChange={(value) =>
-            setForm({ ...form, first_name: value })
-          }
-        />
-        <Input
-          label="Last name"
-          value={form.last_name}
-          onChange={(value) =>
-            setForm({ ...form, last_name: value })
-          }
-        />
-        <Input
-          label="Email"
-          type="email"
-          value={form.email}
-          onChange={(value) =>
-            setForm({ ...form, email: value })
-          }
-        />
-        <Input
-          label="Phone"
-          value={form.phone_number}
-          onChange={(value) =>
-            setForm({
-              ...form,
-              phone_number: value,
-            })
-          }
-        />
-        <Select
-          label="Privilege"
-          value={form.role}
-          onChange={(value) =>
-            setForm({ ...form, role: value })
-          }
-          options={[
-            ["SUPER_ADMIN", "Full privilege"],
-            ["ADMIN", "Restricted admin"],
-            ["SECURITY", "Security"],
-            ["RECEPTION", "Reception"],
-          ]}
-        />
-        <SubmitButton
-          label="Add Admin"
-          loading={loading}
-        />
-      </form>
-    </ManagementLayout>
   );
 }
 
@@ -1163,6 +1031,23 @@ function ActionButton({
     >
       {label}
     </button>
+  );
+}
+
+function ActionLink({
+  label,
+  to,
+}: {
+  label: string;
+  to: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex min-h-12 items-center rounded-lg bg-slate-800 px-4 py-3 text-left font-semibold text-slate-100 hover:bg-blue-600"
+    >
+      {label}
+    </Link>
   );
 }
 

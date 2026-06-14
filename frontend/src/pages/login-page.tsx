@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [password, setPassword] =
     useState("");
 
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [loading, setLoading] =
     useState(false);
 
@@ -76,15 +79,26 @@ export default function LoginPage() {
           className="w-full p-3 mb-4 rounded-lg bg-slate-800 text-white outline-none"
         />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
-          className="w-full p-3 mb-4 rounded-lg bg-slate-800 text-white outline-none"
-        />
+        <div className="mb-4 flex min-h-12 items-center rounded-lg bg-slate-800">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+            className="min-h-12 w-full rounded-lg bg-transparent p-3 text-white outline-none"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              setShowPassword(!showPassword)
+            }
+            className="min-h-12 px-3 text-sm font-semibold text-blue-300 hover:text-blue-200"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
 
         {error && (
           <p className="text-red-400 mb-4">

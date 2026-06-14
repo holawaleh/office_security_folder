@@ -22,6 +22,16 @@ export interface CreateUserPayload {
   role: string;
 }
 
+export interface UpdateUserPayload {
+  username?: string;
+  password?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role?: string;
+}
+
 interface UserProfileResponse {
   count: number;
   results: UserProfile[];
@@ -54,6 +64,19 @@ export async function registerUserAccount(
   const response =
     await api.post<UserProfile>(
       "/api/accounts/register/",
+      payload
+    );
+
+  return response.data;
+}
+
+export async function updateUserProfile(
+  id: number,
+  payload: UpdateUserPayload
+) {
+  const response =
+    await api.patch<UserProfile>(
+      `/api/accounts/${id}/`,
       payload
     );
 
