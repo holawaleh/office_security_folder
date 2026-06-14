@@ -69,6 +69,7 @@ class AccessEvent(models.Model):
     AUTH_METHODS = [
         ("RFID", "RFID"),
         ("FINGERPRINT", "FINGERPRINT"),
+        ("VISITOR_CODE", "VISITOR_CODE"),
         ("REMOTE", "REMOTE"),
         ("MANUAL", "MANUAL"),
     ]
