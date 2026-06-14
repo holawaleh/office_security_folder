@@ -47,3 +47,15 @@ export async function createUserProfile(
 
   return response.data;
 }
+
+export async function registerUserAccount(
+  payload: CreateUserPayload
+) {
+  const response =
+    await api.post<UserProfile>(
+      "/api/accounts/register/",
+      payload
+    );
+
+  return response.data;
+}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
 import { loginUser } from "../auth/auth-api";
@@ -100,6 +101,16 @@ export default function LoginPage() {
             ? "Signing in..."
             : "Login"}
         </button>
+
+        <p className="mt-5 text-center text-sm text-slate-400">
+          No account yet?{" "}
+          <Link
+            to="/register"
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Create one
+          </Link>
+        </p>
 
       </form>
     </div>
