@@ -22,6 +22,24 @@ import {
 import Sidebar from "../components/layout/sidebar";
 import Topbar from "../components/layout/topbar";
 
+type DashboardSection =
+  | "overview"
+  | "people"
+  | "visitors"
+  | "devices"
+  | "admins";
+
+const sections: {
+  id: DashboardSection;
+  label: string;
+}[] = [
+  { id: "overview", label: "Overview" },
+  { id: "people", label: "People" },
+  { id: "visitors", label: "Visitors" },
+  { id: "devices", label: "Devices" },
+  { id: "admins", label: "Admins" },
+];
+
 const initialDeviceForm = {
   name: "",
   serial_number: "",
@@ -77,6 +95,8 @@ function formatDate(value: string | null) {
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
+  const [activeSection, setActiveSection] =
+    useState<DashboardSection>("overview");
   const [deviceForm, setDeviceForm] =
     useState(initialDeviceForm);
   const [adminForm, setAdminForm] =
@@ -159,9 +179,24 @@ export default function DashboardPage() {
     (device) => device.status !== "ONLINE"
   );
 
+  const activePeople = people.filter(
+    (person) => person.is_active
+  );
+
   const pendingVisitors = visitors.filter(
     (visitor) => visitor.status === "PENDING"
   );
+
+  const todayVisitors = visitors.filter((visitor) => {
+    if (!visitor.expected_arrival) {
+      return false;
+    }
+
+    return (
+      new Date(visitor.expected_arrival).toDateString() ===
+      new Date().toDateString()
+    );
+  });
 
   const isLoading =
     devicesQuery.isLoading ||
@@ -176,37 +211,37 @@ export default function DashboardPage() {
     visitorsQuery.error;
 
   return (
-    <div className="flex bg-slate-950 min-h-screen">
+    <div className="min-h-screen bg-slate-950 text-white lg:flex">
       <Sidebar />
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <Topbar />
 
-        <main className="p-6 lg:p-10 text-white space-y-8">
-          <div>
-            <p className="text-slate-400">
+        <main className="mx-auto max-w-7xl space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+          <header className="space-y-1">
+            <p className="text-sm text-slate-400">
               Office security command center
             </p>
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-2xl font-bold sm:text-3xl">
               Smart Access Dashboard
             </h1>
-          </div>
+          </header>
 
           {isLoading && (
-            <div className="text-slate-300">
+            <StatusMessage>
               Loading security records...
-            </div>
+            </StatusMessage>
           )}
 
           {hasError && (
-            <div className="text-red-400">
+            <StatusMessage tone="error">
               Some dashboard data failed to load.
-            </div>
+            </StatusMessage>
           )}
 
           {!isLoading && (
             <>
-              <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <SummaryCard
                   label="Devices"
                   value={devices.length}
@@ -217,9 +252,8 @@ export default function DashboardPage() {
                   tone="text-green-400"
                 />
                 <SummaryCard
-                  label="Offline"
-                  value={offlineDevices.length}
-                  tone="text-red-400"
+                  label="Active People"
+                  value={activePeople.length}
                 />
                 <SummaryCard
                   label="Pending Visitors"
@@ -228,552 +262,829 @@ export default function DashboardPage() {
                 />
               </section>
 
-              <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <Panel title="Owner Admins">
-                  <form
-                    className="grid grid-cols-1 md:grid-cols-2 gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      createAdminMutation.mutate(adminForm);
-                    }}
+              <nav
+                aria-label="Dashboard sections"
+                className="grid grid-cols-2 gap-2 rounded-lg border border-slate-800 bg-slate-900 p-2 sm:grid-cols-5"
+              >
+                {sections.map((section) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() =>
+                      setActiveSection(section.id)
+                    }
+                    className={
+                      activeSection === section.id
+                        ? "min-h-12 rounded-md bg-blue-600 px-3 py-3 text-sm font-semibold text-white"
+                        : "min-h-12 rounded-md px-3 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }
                   >
-                    <Input
-                      label="Username"
-                      value={adminForm.username}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          username: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="Password"
-                      type="password"
-                      value={adminForm.password}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          password: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="First name"
-                      value={adminForm.first_name}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          first_name: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Last name"
-                      value={adminForm.last_name}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          last_name: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={adminForm.email}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          email: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Phone"
-                      value={adminForm.phone_number}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          phone_number: value,
-                        })
-                      }
-                    />
-                    <Select
-                      label="Privilege"
-                      value={adminForm.role}
-                      onChange={(value) =>
-                        setAdminForm({
-                          ...adminForm,
-                          role: value,
-                        })
-                      }
-                      options={[
-                        ["SUPER_ADMIN", "Full privilege"],
-                        ["ADMIN", "Restricted admin"],
-                        ["SECURITY", "Security"],
-                        ["RECEPTION", "Reception"],
-                      ]}
-                    />
-                    <SubmitButton
-                      label="Add Admin"
-                      loading={createAdminMutation.isPending}
-                    />
-                  </form>
+                    {section.label}
+                  </button>
+                ))}
+              </nav>
 
-                  <CompactList
-                    emptyText="No admin users listed yet"
-                    items={users.slice(0, 5).map((user) => ({
-                      title: user.full_name,
-                      meta: `${user.role} - ${user.email || "No email"}`,
-                    }))}
-                  />
-                </Panel>
+              {activeSection === "overview" && (
+                <OverviewSection
+                  devices={devices}
+                  users={users}
+                  people={people}
+                  visitors={visitors}
+                  onlineDevices={onlineDevices.length}
+                  offlineDevices={offlineDevices.length}
+                  todayVisitors={todayVisitors.length}
+                  pendingVisitors={pendingVisitors.length}
+                  onOpenSection={setActiveSection}
+                />
+              )}
 
-                <Panel title="Add People">
-                  <form
-                    className="grid grid-cols-1 md:grid-cols-2 gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      createPersonMutation.mutate({
-                        ...personForm,
-                        employee_id:
-                          personForm.employee_id || null,
-                        rfid_uid: personForm.rfid_uid || null,
-                        fingerprint_id:
-                          personForm.fingerprint_id
-                            ? Number(
-                                personForm.fingerprint_id
-                              )
-                            : null,
-                      });
-                    }}
-                  >
-                    <Input
-                      label="Full name"
-                      value={personForm.full_name}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          full_name: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="Phone"
-                      value={personForm.phone_number}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          phone_number: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={personForm.email}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          email: value,
-                        })
-                      }
-                    />
-                    <Select
-                      label="Person type"
-                      value={personForm.person_type}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          person_type: value,
-                        })
-                      }
-                      options={[
-                        ["STAFF", "Staff"],
-                        ["VISITOR", "Visitor"],
-                        ["OFFICE_WORKER", "Office worker"],
-                        ["CONTRACTOR", "Contractor"],
-                        ["SECURITY", "Security"],
-                        ["OTHER", "Other"],
-                      ]}
-                    />
-                    <Input
-                      label="Employee ID"
-                      value={personForm.employee_id}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          employee_id: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="RFID UID"
-                      value={personForm.rfid_uid}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          rfid_uid: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Fingerprint ID"
-                      type="number"
-                      value={personForm.fingerprint_id}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          fingerprint_id: value,
-                        })
-                      }
-                    />
-                    <Select
-                      label="Access level"
-                      value={personForm.access_level}
-                      onChange={(value) =>
-                        setPersonForm({
-                          ...personForm,
-                          access_level: value,
-                        })
-                      }
-                      options={[
-                        ["ADMIN", "Admin"],
-                        ["STAFF", "Staff"],
-                        ["SECURITY", "Security"],
-                        ["CONTRACTOR", "Contractor"],
-                      ]}
-                    />
-                    <SubmitButton
-                      label="Add Person"
-                      loading={createPersonMutation.isPending}
-                    />
-                  </form>
+              {activeSection === "people" && (
+                <PeopleSection
+                  people={people}
+                  form={personForm}
+                  setForm={setPersonForm}
+                  loading={createPersonMutation.isPending}
+                  onSubmit={() => {
+                    createPersonMutation.mutate({
+                      ...personForm,
+                      employee_id:
+                        personForm.employee_id || null,
+                      rfid_uid:
+                        personForm.rfid_uid || null,
+                      fingerprint_id:
+                        personForm.fingerprint_id
+                          ? Number(
+                              personForm.fingerprint_id
+                            )
+                          : null,
+                    });
+                  }}
+                />
+              )}
 
-                  <CompactList
-                    emptyText="No people added yet"
-                    items={people.slice(0, 5).map((person) => ({
-                      title: person.full_name,
-                      meta: `${person.person_type} - ${person.phone_number || "No phone"} - ${person.email || "No email"}`,
-                    }))}
-                  />
-                </Panel>
-              </section>
+              {activeSection === "visitors" && (
+                <VisitorsSection
+                  visitors={visitors}
+                  form={visitorForm}
+                  setForm={setVisitorForm}
+                  loading={createVisitorMutation.isPending}
+                  onSubmit={() => {
+                    createVisitorMutation.mutate({
+                      ...visitorForm,
+                      expected_arrival:
+                        visitorForm.expected_arrival ||
+                        null,
+                    });
+                  }}
+                />
+              )}
 
-              <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <Panel title="Add Visitor">
-                  <form
-                    className="grid grid-cols-1 md:grid-cols-2 gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      createVisitorMutation.mutate({
-                        ...visitorForm,
-                        expected_arrival:
-                          visitorForm.expected_arrival ||
-                          null,
-                      });
-                    }}
-                  >
-                    <Input
-                      label="Full name"
-                      value={visitorForm.full_name}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          full_name: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="Phone"
-                      value={visitorForm.phone_number}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          phone_number: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={visitorForm.email}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          email: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Host name"
-                      value={visitorForm.host_name}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          host_name: value,
-                        })
-                      }
-                      required
-                    />
-                    <Select
-                      label="Visit usage"
-                      value={visitorForm.visit_usage}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          visit_usage: value,
-                        })
-                      }
-                      options={[
-                        ["MEETING", "Meeting"],
-                        ["DELIVERY", "Delivery"],
-                        ["INTERVIEW", "Interview"],
-                        ["MAINTENANCE", "Maintenance"],
-                        ["OFFICIAL", "Official"],
-                        ["CUSTOM", "Custom"],
-                      ]}
-                    />
-                    <Input
-                      label="Custom usage"
-                      value={visitorForm.custom_visit_usage}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          custom_visit_usage: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Access code"
-                      value={visitorForm.access_code}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          access_code: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="Expected arrival"
-                      type="datetime-local"
-                      value={visitorForm.expected_arrival}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          expected_arrival: value,
-                        })
-                      }
-                    />
-                    <Textarea
-                      label="Purpose"
-                      value={visitorForm.purpose}
-                      onChange={(value) =>
-                        setVisitorForm({
-                          ...visitorForm,
-                          purpose: value,
-                        })
-                      }
-                    />
-                    <SubmitButton
-                      label="Add Visitor"
-                      loading={createVisitorMutation.isPending}
-                    />
-                  </form>
+              {activeSection === "devices" && (
+                <DevicesSection
+                  devices={devices}
+                  form={deviceForm}
+                  setForm={setDeviceForm}
+                  loading={createDeviceMutation.isPending}
+                  onSubmit={() => {
+                    createDeviceMutation.mutate({
+                      ...deviceForm,
+                      ip_address:
+                        deviceForm.ip_address || undefined,
+                      firmware_version:
+                        deviceForm.firmware_version ||
+                        undefined,
+                    });
+                  }}
+                />
+              )}
 
-                  <CompactList
-                    emptyText="No visitors added yet"
-                    items={visitors.slice(0, 5).map((visitor) => ({
-                      title: visitor.full_name,
-                      meta: `${visitor.effective_visit_usage} - ${visitor.status} - ${visitor.host_name}`,
-                    }))}
-                  />
-                </Panel>
-
-                <Panel title="Devices">
-                  {devices.length === 0 && (
-                    <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 text-amber-100">
-                      No devices exist yet. Add the first device
-                      so Raspberry Pi or fingerprint terminals can
-                      report heartbeats.
-                    </div>
-                  )}
-
-                  <form
-                    className="grid grid-cols-1 md:grid-cols-2 gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      createDeviceMutation.mutate({
-                        ...deviceForm,
-                        ip_address:
-                          deviceForm.ip_address || undefined,
-                        firmware_version:
-                          deviceForm.firmware_version ||
-                          undefined,
-                      });
-                    }}
-                  >
-                    <Input
-                      label="Device name"
-                      value={deviceForm.name}
-                      onChange={(value) =>
-                        setDeviceForm({
-                          ...deviceForm,
-                          name: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="Serial number"
-                      value={deviceForm.serial_number}
-                      onChange={(value) =>
-                        setDeviceForm({
-                          ...deviceForm,
-                          serial_number: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="Location"
-                      value={deviceForm.location}
-                      onChange={(value) =>
-                        setDeviceForm({
-                          ...deviceForm,
-                          location: value,
-                        })
-                      }
-                      required
-                    />
-                    <Input
-                      label="IP address"
-                      value={deviceForm.ip_address}
-                      onChange={(value) =>
-                        setDeviceForm({
-                          ...deviceForm,
-                          ip_address: value,
-                        })
-                      }
-                    />
-                    <Input
-                      label="Firmware"
-                      value={deviceForm.firmware_version}
-                      onChange={(value) =>
-                        setDeviceForm({
-                          ...deviceForm,
-                          firmware_version: value,
-                        })
-                      }
-                    />
-                    <Select
-                      label="Status"
-                      value={deviceForm.status}
-                      onChange={(value) =>
-                        setDeviceForm({
-                          ...deviceForm,
-                          status: value,
-                        })
-                      }
-                      options={[
-                        ["OFFLINE", "Offline"],
-                        ["ONLINE", "Online"],
-                        ["MAINTENANCE", "Maintenance"],
-                      ]}
-                    />
-                    <SubmitButton
-                      label="Add Device"
-                      loading={createDeviceMutation.isPending}
-                    />
-                  </form>
-                </Panel>
-              </section>
-
-              <section className="bg-slate-900 rounded-lg p-5 border border-slate-800">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">
-                    Device Inventory
-                  </h2>
-                </div>
-
-                {devices.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-slate-300">
-                      No devices connected yet
-                    </p>
-                    <p className="text-slate-500">
-                      Add a device above to begin monitoring
-                      location, serial number, firmware, and
-                      heartbeat state.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {devices.map((device) => (
-                      <div
-                        key={device.id}
-                        className="bg-slate-800 p-4 rounded-lg border border-slate-700"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="font-semibold text-lg">
-                              {device.name}
-                            </p>
-                            <p className="text-sm text-slate-400">
-                              {device.location}
-                            </p>
-                          </div>
-                          <p
-                            className={
-                              device.status === "ONLINE"
-                                ? "text-green-400 font-semibold"
-                                : "text-red-400 font-semibold"
-                            }
-                          >
-                            {device.status}
-                          </p>
-                        </div>
-                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-sm">
-                          <Info
-                            label="Serial"
-                            value={device.serial_number}
-                          />
-                          <Info
-                            label="IP address"
-                            value={
-                              device.ip_address ||
-                              "Not assigned"
-                            }
-                          />
-                          <Info
-                            label="Firmware"
-                            value={
-                              device.firmware_version ||
-                              "Not recorded"
-                            }
-                          />
-                          <Info
-                            label="Last seen"
-                            value={formatDate(
-                              device.last_seen
-                            )}
-                          />
-                        </dl>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+              {activeSection === "admins" && (
+                <AdminsSection
+                  users={users}
+                  form={adminForm}
+                  setForm={setAdminForm}
+                  loading={createAdminMutation.isPending}
+                  onSubmit={() => {
+                    createAdminMutation.mutate(adminForm);
+                  }}
+                />
+              )}
             </>
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function OverviewSection({
+  devices,
+  users,
+  people,
+  visitors,
+  onlineDevices,
+  offlineDevices,
+  todayVisitors,
+  pendingVisitors,
+  onOpenSection,
+}: {
+  devices: ReturnType<typeof getDevices> extends Promise<infer T>
+    ? T
+    : never;
+  users: ReturnType<typeof getUserProfiles> extends Promise<infer T>
+    ? T
+    : never;
+  people: ReturnType<typeof getAccessPeople> extends Promise<infer T>
+    ? T
+    : never;
+  visitors: ReturnType<typeof getVisitors> extends Promise<infer T>
+    ? T
+    : never;
+  onlineDevices: number;
+  offlineDevices: number;
+  todayVisitors: number;
+  pendingVisitors: number;
+  onOpenSection: (section: DashboardSection) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <ActivityPanel title="Activity Summary">
+          <ActivityRow
+            label="Devices online"
+            value={`${onlineDevices}/${devices.length}`}
+            tone="text-green-400"
+          />
+          <ActivityRow
+            label="Devices needing attention"
+            value={offlineDevices}
+            tone={
+              offlineDevices > 0
+                ? "text-red-400"
+                : "text-slate-200"
+            }
+          />
+          <ActivityRow
+            label="Visitors expected today"
+            value={todayVisitors}
+          />
+          <ActivityRow
+            label="Visitors awaiting action"
+            value={pendingVisitors}
+            tone="text-amber-300"
+          />
+        </ActivityPanel>
+
+        <ActivityPanel title="Quick Actions">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <ActionButton
+              label="Add Device"
+              onClick={() => onOpenSection("devices")}
+            />
+            <ActionButton
+              label="Register Person"
+              onClick={() => onOpenSection("people")}
+            />
+            <ActionButton
+              label="Add Visitor"
+              onClick={() => onOpenSection("visitors")}
+            />
+            <ActionButton
+              label="Manage Admins"
+              onClick={() => onOpenSection("admins")}
+            />
+          </div>
+        </ActivityPanel>
+
+        <ActivityPanel title="System Coverage">
+          <ActivityRow
+            label="Registered people"
+            value={people.length}
+          />
+          <ActivityRow
+            label="Admin accounts"
+            value={users.length}
+          />
+          <ActivityRow
+            label="Visitor records"
+            value={visitors.length}
+          />
+          <ActivityRow
+            label="Registered devices"
+            value={devices.length}
+          />
+        </ActivityPanel>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ActivityPanel title="Recent Visitors">
+          <CompactList
+            emptyText="No recent visitors"
+            items={visitors.slice(0, 5).map((visitor) => ({
+              title: visitor.full_name,
+              meta: `${visitor.effective_visit_usage} - ${visitor.status} - ${visitor.host_name}`,
+            }))}
+          />
+        </ActivityPanel>
+
+        <ActivityPanel title="Device Status">
+          {devices.length === 0 ? (
+            <EmptyState
+              title="No devices added"
+              body="Add a device to start monitoring terminal locations, firmware, and heartbeat status."
+            />
+          ) : (
+            <CompactList
+              emptyText="No devices added"
+              items={devices.slice(0, 5).map((device) => ({
+                title: device.name,
+                meta: `${device.status} - ${device.location} - Last seen: ${formatDate(device.last_seen)}`,
+              }))}
+            />
+          )}
+        </ActivityPanel>
+      </section>
+    </div>
+  );
+}
+
+function PeopleSection({
+  people,
+  form,
+  setForm,
+  loading,
+  onSubmit,
+}: {
+  people: ReturnType<typeof getAccessPeople> extends Promise<infer T>
+    ? T
+    : never;
+  form: typeof initialPersonForm;
+  setForm: (form: typeof initialPersonForm) => void;
+  loading: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <ManagementLayout
+      title="People Directory"
+      description="Register staff, office workers, visitors, contractors, and security users who need access records."
+      listTitle="Registered People"
+      list={
+        <CompactList
+          emptyText="No people added yet"
+          items={people.slice(0, 8).map((person) => ({
+            title: person.full_name,
+            meta: `${person.person_type} - ${person.phone_number || "No phone"} - ${person.email || "No email"}`,
+          }))}
+        />
+      }
+    >
+      <form
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <Input
+          label="Full name"
+          value={form.full_name}
+          onChange={(value) =>
+            setForm({ ...form, full_name: value })
+          }
+          required
+        />
+        <Input
+          label="Phone"
+          value={form.phone_number}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              phone_number: value,
+            })
+          }
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(value) =>
+            setForm({ ...form, email: value })
+          }
+        />
+        <Select
+          label="Person type"
+          value={form.person_type}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              person_type: value,
+            })
+          }
+          options={[
+            ["STAFF", "Staff"],
+            ["VISITOR", "Visitor"],
+            ["OFFICE_WORKER", "Office worker"],
+            ["CONTRACTOR", "Contractor"],
+            ["SECURITY", "Security"],
+            ["OTHER", "Other"],
+          ]}
+        />
+        <Input
+          label="Employee ID"
+          value={form.employee_id}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              employee_id: value,
+            })
+          }
+        />
+        <Input
+          label="RFID UID"
+          value={form.rfid_uid}
+          onChange={(value) =>
+            setForm({ ...form, rfid_uid: value })
+          }
+        />
+        <Input
+          label="Fingerprint ID"
+          type="number"
+          value={form.fingerprint_id}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              fingerprint_id: value,
+            })
+          }
+        />
+        <Select
+          label="Access level"
+          value={form.access_level}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              access_level: value,
+            })
+          }
+          options={[
+            ["ADMIN", "Admin"],
+            ["STAFF", "Staff"],
+            ["SECURITY", "Security"],
+            ["CONTRACTOR", "Contractor"],
+          ]}
+        />
+        <SubmitButton
+          label="Add Person"
+          loading={loading}
+        />
+      </form>
+    </ManagementLayout>
+  );
+}
+
+function VisitorsSection({
+  visitors,
+  form,
+  setForm,
+  loading,
+  onSubmit,
+}: {
+  visitors: ReturnType<typeof getVisitors> extends Promise<infer T>
+    ? T
+    : never;
+  form: typeof initialVisitorForm;
+  setForm: (form: typeof initialVisitorForm) => void;
+  loading: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <ManagementLayout
+      title="Visitor Desk"
+      description="Create visitor records, access codes, and visit purpose details before arrival."
+      listTitle="Recent Visitors"
+      list={
+        <CompactList
+          emptyText="No visitors added yet"
+          items={visitors.slice(0, 8).map((visitor) => ({
+            title: visitor.full_name,
+            meta: `${visitor.effective_visit_usage} - ${visitor.status} - ${visitor.host_name}`,
+          }))}
+        />
+      }
+    >
+      <form
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <Input
+          label="Full name"
+          value={form.full_name}
+          onChange={(value) =>
+            setForm({ ...form, full_name: value })
+          }
+          required
+        />
+        <Input
+          label="Phone"
+          value={form.phone_number}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              phone_number: value,
+            })
+          }
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(value) =>
+            setForm({ ...form, email: value })
+          }
+        />
+        <Input
+          label="Host name"
+          value={form.host_name}
+          onChange={(value) =>
+            setForm({ ...form, host_name: value })
+          }
+          required
+        />
+        <Select
+          label="Visit usage"
+          value={form.visit_usage}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              visit_usage: value,
+            })
+          }
+          options={[
+            ["MEETING", "Meeting"],
+            ["DELIVERY", "Delivery"],
+            ["INTERVIEW", "Interview"],
+            ["MAINTENANCE", "Maintenance"],
+            ["OFFICIAL", "Official"],
+            ["CUSTOM", "Custom"],
+          ]}
+        />
+        <Input
+          label="Custom usage"
+          value={form.custom_visit_usage}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              custom_visit_usage: value,
+            })
+          }
+        />
+        <Input
+          label="Access code"
+          value={form.access_code}
+          onChange={(value) =>
+            setForm({ ...form, access_code: value })
+          }
+          required
+        />
+        <Input
+          label="Expected arrival"
+          type="datetime-local"
+          value={form.expected_arrival}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              expected_arrival: value,
+            })
+          }
+        />
+        <Textarea
+          label="Purpose"
+          value={form.purpose}
+          onChange={(value) =>
+            setForm({ ...form, purpose: value })
+          }
+        />
+        <SubmitButton
+          label="Add Visitor"
+          loading={loading}
+        />
+      </form>
+    </ManagementLayout>
+  );
+}
+
+function DevicesSection({
+  devices,
+  form,
+  setForm,
+  loading,
+  onSubmit,
+}: {
+  devices: ReturnType<typeof getDevices> extends Promise<infer T>
+    ? T
+    : never;
+  form: typeof initialDeviceForm;
+  setForm: (form: typeof initialDeviceForm) => void;
+  loading: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      {devices.length === 0 && (
+        <StatusMessage tone="warning">
+          No devices exist yet. Add the first device so terminals can report heartbeat activity.
+        </StatusMessage>
+      )}
+
+      <ManagementLayout
+        title="Device Setup"
+        description="Register access terminals and monitor their location, serial number, firmware, IP address, and heartbeat status."
+        listTitle="Device Inventory"
+        list={<DeviceInventory devices={devices} />}
+      >
+        <form
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <Input
+            label="Device name"
+            value={form.name}
+            onChange={(value) =>
+              setForm({ ...form, name: value })
+            }
+            required
+          />
+          <Input
+            label="Serial number"
+            value={form.serial_number}
+            onChange={(value) =>
+              setForm({
+                ...form,
+                serial_number: value,
+              })
+            }
+            required
+          />
+          <Input
+            label="Location"
+            value={form.location}
+            onChange={(value) =>
+              setForm({ ...form, location: value })
+            }
+            required
+          />
+          <Input
+            label="IP address"
+            value={form.ip_address}
+            onChange={(value) =>
+              setForm({ ...form, ip_address: value })
+            }
+          />
+          <Input
+            label="Firmware"
+            value={form.firmware_version}
+            onChange={(value) =>
+              setForm({
+                ...form,
+                firmware_version: value,
+              })
+            }
+          />
+          <Select
+            label="Status"
+            value={form.status}
+            onChange={(value) =>
+              setForm({ ...form, status: value })
+            }
+            options={[
+              ["OFFLINE", "Offline"],
+              ["ONLINE", "Online"],
+              ["MAINTENANCE", "Maintenance"],
+            ]}
+          />
+          <SubmitButton
+            label="Add Device"
+            loading={loading}
+          />
+        </form>
+      </ManagementLayout>
+    </div>
+  );
+}
+
+function AdminsSection({
+  users,
+  form,
+  setForm,
+  loading,
+  onSubmit,
+}: {
+  users: ReturnType<typeof getUserProfiles> extends Promise<infer T>
+    ? T
+    : never;
+  form: typeof initialAdminForm;
+  setForm: (form: typeof initialAdminForm) => void;
+  loading: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <ManagementLayout
+      title="Owner Admins"
+      description="Add operators with full or restricted privileges for managing the security system."
+      listTitle="Admin Accounts"
+      list={
+        <CompactList
+          emptyText="No admin users listed yet"
+          items={users.slice(0, 8).map((user) => ({
+            title: user.full_name,
+            meta: `${user.role} - ${user.email || "No email"}`,
+          }))}
+        />
+      }
+    >
+      <form
+        className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <Input
+          label="Username"
+          value={form.username}
+          onChange={(value) =>
+            setForm({ ...form, username: value })
+          }
+          required
+        />
+        <Input
+          label="Password"
+          type="password"
+          value={form.password}
+          onChange={(value) =>
+            setForm({ ...form, password: value })
+          }
+          required
+        />
+        <Input
+          label="First name"
+          value={form.first_name}
+          onChange={(value) =>
+            setForm({ ...form, first_name: value })
+          }
+        />
+        <Input
+          label="Last name"
+          value={form.last_name}
+          onChange={(value) =>
+            setForm({ ...form, last_name: value })
+          }
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(value) =>
+            setForm({ ...form, email: value })
+          }
+        />
+        <Input
+          label="Phone"
+          value={form.phone_number}
+          onChange={(value) =>
+            setForm({
+              ...form,
+              phone_number: value,
+            })
+          }
+        />
+        <Select
+          label="Privilege"
+          value={form.role}
+          onChange={(value) =>
+            setForm({ ...form, role: value })
+          }
+          options={[
+            ["SUPER_ADMIN", "Full privilege"],
+            ["ADMIN", "Restricted admin"],
+            ["SECURITY", "Security"],
+            ["RECEPTION", "Reception"],
+          ]}
+        />
+        <SubmitButton
+          label="Add Admin"
+          loading={loading}
+        />
+      </form>
+    </ManagementLayout>
+  );
+}
+
+function ManagementLayout({
+  title,
+  description,
+  listTitle,
+  list,
+  children,
+}: {
+  title: string;
+  description: string;
+  listTitle: string;
+  list: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+      <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 sm:p-5">
+        <div className="mb-5">
+          <h2 className="text-xl font-semibold">
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-slate-400">
+            {description}
+          </p>
+        </div>
+        {children}
+      </div>
+
+      <aside className="rounded-lg border border-slate-800 bg-slate-900 p-4 sm:p-5">
+        <h3 className="text-lg font-semibold">
+          {listTitle}
+        </h3>
+        {list}
+      </aside>
+    </section>
+  );
+}
+
+function DeviceInventory({
+  devices,
+}: {
+  devices: ReturnType<typeof getDevices> extends Promise<infer T>
+    ? T
+    : never;
+}) {
+  if (devices.length === 0) {
+    return (
+      <EmptyState
+        title="No devices connected yet"
+        body="Add a device to begin monitoring location, serial number, firmware, and heartbeat state."
+      />
+    );
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      {devices.map((device) => (
+        <div
+          key={device.id}
+          className="rounded-lg border border-slate-700 bg-slate-800 p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold">{device.name}</p>
+              <p className="text-sm text-slate-400">
+                {device.location}
+              </p>
+            </div>
+            <p
+              className={
+                device.status === "ONLINE"
+                  ? "font-semibold text-green-400"
+                  : "font-semibold text-red-400"
+              }
+            >
+              {device.status}
+            </p>
+          </div>
+          <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            <Info
+              label="Serial"
+              value={device.serial_number}
+            />
+            <Info
+              label="IP address"
+              value={device.ip_address || "Not assigned"}
+            />
+            <Info
+              label="Firmware"
+              value={
+                device.firmware_version || "Not recorded"
+              }
+            />
+            <Info
+              label="Last seen"
+              value={formatDate(device.last_seen)}
+            />
+          </dl>
+        </div>
+      ))}
     </div>
   );
 }
@@ -788,18 +1099,18 @@ function SummaryCard({
   tone?: string;
 }) {
   return (
-    <div className="bg-slate-900 p-5 rounded-lg border border-slate-800">
-      <h2 className="text-slate-400 text-sm">
+    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 sm:p-5">
+      <h2 className="text-sm text-slate-400">
         {label}
       </h2>
-      <p className={`text-3xl font-bold mt-2 ${tone}`}>
+      <p className={`mt-2 text-3xl font-bold ${tone}`}>
         {value}
       </p>
     </div>
   );
 }
 
-function Panel({
+function ActivityPanel({
   title,
   children,
 }: {
@@ -807,12 +1118,72 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="bg-slate-900 rounded-lg p-5 border border-slate-800">
-      <h2 className="text-xl font-semibold mb-4">
+    <section className="rounded-lg border border-slate-800 bg-slate-900 p-4 sm:p-5">
+      <h2 className="mb-4 text-lg font-semibold">
         {title}
       </h2>
       {children}
     </section>
+  );
+}
+
+function ActivityRow({
+  label,
+  value,
+  tone = "text-slate-100",
+}: {
+  label: string;
+  value: number | string;
+  tone?: string;
+}) {
+  return (
+    <div className="flex min-h-12 items-center justify-between border-b border-slate-800 py-2 last:border-b-0">
+      <span className="text-sm text-slate-400">
+        {label}
+      </span>
+      <span className={`text-lg font-semibold ${tone}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ActionButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="min-h-12 rounded-lg bg-slate-800 px-4 py-3 text-left font-semibold text-slate-100 hover:bg-blue-600"
+    >
+      {label}
+    </button>
+  );
+}
+
+function StatusMessage({
+  children,
+  tone = "default",
+}: {
+  children: ReactNode;
+  tone?: "default" | "error" | "warning";
+}) {
+  const className =
+    tone === "error"
+      ? "border-red-400/30 bg-red-400/10 text-red-200"
+      : tone === "warning"
+        ? "border-amber-400/30 bg-amber-400/10 text-amber-100"
+        : "border-slate-700 bg-slate-900 text-slate-300";
+
+  return (
+    <div className={`rounded-lg border p-4 ${className}`}>
+      {children}
+    </div>
   );
 }
 
@@ -839,7 +1210,7 @@ function Input({
         onChange={(event) =>
           onChange(event.target.value)
         }
-        className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white outline-none focus:border-blue-500"
+        className="min-h-12 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-base text-white outline-none focus:border-blue-500"
       />
     </label>
   );
@@ -864,7 +1235,7 @@ function Select({
         onChange={(event) =>
           onChange(event.target.value)
         }
-        className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white outline-none focus:border-blue-500"
+        className="min-h-12 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-base text-white outline-none focus:border-blue-500"
       >
         {options.map(([optionValue, labelText]) => (
           <option
@@ -889,14 +1260,14 @@ function Textarea({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block md:col-span-2 text-sm text-slate-300">
+    <label className="block text-sm text-slate-300 md:col-span-2">
       <span className="mb-1 block">{label}</span>
       <textarea
         value={value}
         onChange={(event) =>
           onChange(event.target.value)
         }
-        className="w-full min-h-24 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white outline-none focus:border-blue-500"
+        className="min-h-28 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-base text-white outline-none focus:border-blue-500"
       />
     </label>
   );
@@ -913,7 +1284,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={loading}
-      className="self-end rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="min-h-12 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {loading ? "Saving..." : label}
     </button>
@@ -936,11 +1307,11 @@ function CompactList({
   }
 
   return (
-    <div className="mt-5 space-y-2">
+    <div className="mt-4 space-y-2">
       {items.map((item) => (
         <div
           key={`${item.title}-${item.meta}`}
-          className="rounded-lg bg-slate-800 border border-slate-700 px-3 py-2"
+          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-3"
         >
           <p className="font-medium">{item.title}</p>
           <p className="text-sm text-slate-400">
@@ -948,6 +1319,25 @@ function CompactList({
           </p>
         </div>
       ))}
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  body,
+}: {
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-slate-700 p-6 text-center">
+      <p className="font-semibold text-slate-200">
+        {title}
+      </p>
+      <p className="mt-1 text-sm text-slate-500">
+        {body}
+      </p>
     </div>
   );
 }
